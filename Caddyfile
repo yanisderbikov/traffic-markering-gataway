@@ -1,0 +1,45 @@
+{
+	admin off
+	auto_https off
+	servers {
+		# Railway edge ходит к контейнеру из 100.64.0.0/10 и уже ставит X-Forwarded-*.
+		trusted_proxies static 100.64.0.0/10 private_ranges
+	}
+}
+
+# reverse_proxy на адрес из переменной окружения. Host уходит апстриму его
+# собственный (как делал nginx с $proxy_host), чтобы работали и приватные
+# *.railway.internal, и публичные https-адреса. Имя резолвится на каждое
+# соединение, поэтому редеплой соседа с новым IP подхватывается сам.
+(upstream) {
+	reverse_proxy {args[0]} {
+		header_up Host {upstream_hostport}
+		transport http {
+			dial_timeout 5s
+		}
+	}
+}
+
+:{$PORT} {
+	log {
+		output stdout
+		format console
+	}
+
+	request_body {
+		max_size 20MB
+	}
+
+	handle /healthz {
+		respond "ok" 200
+	}
+
+	@backend path /api/* /v3/api-docs /v3/api-docs/* /swagger-ui /swagger-ui/*
+	handle @backend {
+		import upstream {$BACKEND_URL}
+	}
+
+	handle {
+		import upstream {$FRONTEND_URL}
+	}
+}

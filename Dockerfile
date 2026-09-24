@@ -1,9 +1,10 @@
-FROM nginx:alpine
+FROM caddy:2-alpine
 
 ENV PORT=80
-ENV CACHE_TTL=10m
 
-COPY nginx/gateway.conf.template /etc/nginx/gateway.conf.template
-COPY --chmod=755 docker-entrypoint.d/25-render-gateway.sh /docker-entrypoint.d/25-render-gateway.sh
+COPY Caddyfile /etc/caddy/Caddyfile
+COPY --chmod=755 docker-entrypoint.sh /docker-entrypoint.sh
 
 EXPOSE 80
+
+ENTRYPOINT ["/docker-entrypoint.sh"]
